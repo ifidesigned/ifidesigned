@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio OS — If I Designed</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
+<script src="supabase.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--ink:#0e0e0e;--paper:#f7f5f0;--white:#ffffff;--grey:#6f6b62;--line:#d6d1c6;--stone:#ece8df;--good:#4a6b4f;--warn:#9c6b2e;--bad:#8a3b2e;}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--ink);}
+.login-box{width:360px;padding:48px 40px;background:var(--paper);}
+.login-box .brand{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-bottom:32px;}
+.login-box h1{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:6px;}
+.login-box p{font-size:13px;color:var(--grey);margin-bottom:32px;}
+.login-box label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);display:block;margin-bottom:8px;}
+.login-box input{width:100%;border:none;border-bottom:0.75px solid var(--line);background:transparent;font-family:'Jost',sans-serif;font-size:14px;padding:10px 0;margin-bottom:24px;outline:none;}
+.login-btn{width:100%;background:var(--ink);color:var(--paper);border:none;padding:14px;font-family:'Jost',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-top:8px;}
+.login-error{font-size:13px;color:var(--bad);margin-top:14px;display:none;}
+#app{display:none;height:100vh;overflow:hidden;}
+#app.active{display:flex;}
+.sidebar{width:220px;background:var(--ink);color:var(--paper);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:28px 0;}
+.sb-brand{font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:0 20px;margin-bottom:4px;}
+.sb-sub{font-size:12px;color:#9c988d;padding:0 20px;margin-bottom:32px;font-style:italic;font-family:'Cormorant Garamond',serif;}
+.nav-section{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a574d;padding:0 20px;margin:20px 0 8px;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 20px;border:none;background:transparent;color:#b9b5a8;font-family:'Jost',sans-serif;font-size:13px;cursor:pointer;text-align:left;}
+.nav-btn:hover{background:rgba(255,255,255,0.04);color:var(--paper);}
+.nav-btn.active{background:var(--paper);color:var(--ink);font-weight:500;}
+.nav-btn .ic{font-size:10px;opacity:0.5;width:14px;text-align:center;}
+.sb-foot{margin-top:auto;padding:20px;border-top:0.5px solid #2a2924;}
+.sb-name{font-size:13px;font-weight:500;color:var(--paper);}
+.sb-role{font-size:11px;color:#9c988d;margin-top:2px;}
+.sb-logout{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#9c988d;background:none;border:none;cursor:pointer;margin-top:14px;display:block;}
+.main{flex:1;overflow-y:auto;padding:40px 48px;}
+.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);display:block;margin-bottom:8px;}
+.page-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:400;margin-bottom:6px;line-height:1.2;}
+.page-title .script{font-style:italic;}
+.page-sub{font-size:13.5px;color:var(--grey);margin-bottom:32px;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+.stat-card{background:var(--white);border:0.75px solid var(--line);padding:20px 22px;}
+.stat-card .label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);margin-bottom:10px;}
+.stat-card .value{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;}
+.stat-card .value.good{color:var(--good);}
+.stat-card .value.warn{color:var(--warn);}
+.panel{background:var(--white);border:0.75px solid var(--line);padding:24px 28px;margin-bottom:20px;}
+.panel h3{font-family:'Playfair Display',serif;font-size:17px;font-weight:400;margin-bottom:18px;}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey);padding:10px 14px;border-bottom:0.75px solid var(--line);text-align:left;}
+.data-table td{font-size:13.5px;padding:12px 14px;border-bottom:0.5px solid var(--line);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--stone);}
+.pill{display:inline-block;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;padding:3px 10px;}
+.pill.active,.pill.approved,.pill.closed{background:#e8f0e9;color:var(--good);}
+.pill.pending,.pill.contacted,.pill.proposal_sent,.pill.in_progress{background:#f5ede0;color:var(--warn);}
+.pill.overdue,.pill.lost,.pill.cancelled{background:#f5e8e5;color:var(--bad);}
+.pill.new,.pill.completed,.pill.draft{background:var(--stone);color:var(--grey);}
+.pill.sent{background:#f5ede0;color:var(--warn);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;background:var(--stone);border:0.75px solid var(--line);padding:24px;margin-bottom:24px;}
+.form-grid.single{grid-template-columns:1fr;}
+.form-grid .full{grid-column:1/-1;}
+.form-grid label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);display:block;margin-bottom:6px;}
+.form-grid input,.form-grid select,.form-grid textarea{width:100%;border:0.75px solid var(--line);background:var(--white);font-family:'Jost',sans-serif;font-size:13.5px;padding:9px 10px;outline:none;}
+.form-grid textarea{resize:vertical;min-height:72px;}
+.save-btn{grid-column:1/-1;justify-self:start;background:var(--ink);color:var(--paper);border:none;padding:11px 24px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
+.del-btn{font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--bad);background:none;border:none;cursor:pointer;}
+.edit-inline select{border:0.75px solid var(--line);background:var(--white);font-family:'Jost',sans-serif;font-size:12px;padding:4px 6px;cursor:pointer;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-header{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);text-align:center;padding:8px 4px;}
+.cal-day{min-height:80px;background:var(--white);border:0.5px solid var(--line);padding:6px 8px;}
+.cal-day .day-num{font-size:11px;color:var(--grey);margin-bottom:4px;}
+.cal-day.today{border-color:var(--ink);}
+.cal-day.today .day-num{font-weight:600;color:var(--ink);}
+.cal-event{font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-event.meeting{background:#e8f0e9;color:var(--good);}
+.cal-event.delivery{background:#f5ede0;color:var(--warn);}
+.progress-bar{height:4px;background:var(--stone);margin-top:6px;}
+.progress-bar .fill{height:100%;background:var(--ink);}
+.loading{color:var(--grey);font-size:13px;padding:20px 0;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="brand">If I Designed</div>
+    <h1>Studio <span style="font-style:italic;">OS</span></h1>
+    <p>Internal workspace — admin access only.</p>
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="hello@ifidesigned.co" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn">Sign in</button>
+    <p class="login-error" id="loginError">Incorrect email or password.</p>
+  </div>
+</div>
+
+<div id="app">
+  <nav class="sidebar">
+    <div class="sb-brand">If I Designed</div>
+    <div class="sb-sub">Studio OS</div>
+    <div class="nav-section">Overview</div>
+    <button class="nav-btn active" data-section="dashboard"><span class="ic">▪</span>Dashboard</button>
+    <div class="nav-section">Business</div>
+    <button class="nav-btn" data-section="clients"><span class="ic">▪</span>Clients</button>
+    <button class="nav-btn" data-section="projects"><span class="ic">▪</span>Projects</button>
+    <button class="nav-btn" data-section="contracts"><span class="ic">▪</span>Contracts</button>
+    <button class="nav-btn" data-section="financial"><span class="ic">▪</span>Financial</button>
+    <div class="nav-section">Work</div>
+    <button class="nav-btn" data-section="calendar"><span class="ic">▪</span>Calendar</button>
+    <button class="nav-btn" data-section="leads"><span class="ic">▪</span>Leads</button>
+    <button class="nav-btn" data-section="newsletter"><span class="ic">▪</span>Newsletter</button>
+    <div class="nav-section">Library</div>
+    <button class="nav-btn" data-section="templates"><span class="ic">▪</span>Templates</button>
+    <button class="nav-btn" data-section="knowledge"><span class="ic">▪</span>Knowledge Base</button>
+    <div class="sb-foot">
+      <div class="sb-name" id="adminNameDisplay">Maria Cruz</div>
+      <div class="sb-role">Studio admin</div>
+      <button class="sb-logout" id="logoutBtn">Sign out</button>
+    </div>
+  </nav>
+  <main class="main" id="mainPanel">
+    <p class="loading">Loading...</p>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL='https://blwtnexzycnsogwoghgk.supabase.co';
+const SUPABASE_KEY='sb_publishable_gWqTBWdba_2fjk9PrRuruA_2w2zFi3-';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+document.getElementById('loginBtn').addEventListener('click',async()=>{
+  const email=document.getElementById('loginEmail').value.trim();
+  const pwd=document.getElementById('loginPassword').value;
+  const btn=document.getElementById('loginBtn');
+  btn.textContent='Signing in...';btn.disabled=true;
+  const{error}=await sb.auth.signInWithPassword({email,password:pwd});
+  btn.textContent='Sign in';btn.disabled=false;
+  if(error){document.getElementById('loginError').style.display='block';return;}
+  await initApp();
+});
+document.getElementById('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginBtn').click();});
+document.getElementById('logoutBtn').addEventListener('click',async()=>{
+  await sb.auth.signOut();
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('loginScreen').style.display='flex';
+});
+
+async function initApp(){
+  const{data:{user}}=await sb.auth.getUser();
+  if(!user)return;
+  const{data:adminRow}=await sb.from('admins').select('*').eq('auth_user_id',user.id).maybeSingle();
+  if(!adminRow){
+    document.getElementById('loginError').textContent='Access denied — admin only.';
+    document.getElementById('loginError').style.display='block';
+    await sb.auth.signOut();return;
+  }
+  document.getElementById('adminNameDisplay').textContent=adminRow.full_name||'Admin';
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').classList.add('active');
+  renderSection('dashboard');
+}
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderSection(btn.dataset.section);
+  });
+});
+
+const main=document.getElementById('mainPanel');
+function fmtDate(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+function fmtEur(n){return n!=null?'€'+Number(n).toLocaleString('pt-PT'):'—';}
+
+async function renderSection(id){
+  main.innerHTML='<p class="loading">Loading...</p>';
+
+  if(id==='dashboard'){
+    const[{data:clients},{data:invoices},{data:meetings},{data:projects},{data:leads}]=await Promise.all([
+      sb.from('clients').select('*'),
+      sb.from('invoices').select('*'),
+      sb.from('meetings').select('*').eq('kind','upcoming').order('meeting_date',{ascending:true}).limit(5),
+      sb.from('projects').select('*').eq('status','active'),
+      sb.from('leads').select('*').in('status',['new','contacted','proposal_sent']),
+    ]);
+    const now=new Date();
+    const all=invoices||[];
+    const monthRev=all.filter(i=>i.status==='paid'&&new Date(i.invoice_date).getMonth()===now.getMonth()&&new Date(i.invoice_date).getFullYear()===now.getFullYear()).reduce((s,i)=>s+(i.amount||0),0);
+    const yearRev=all.filter(i=>i.status==='paid'&&new Date(i.invoice_date).getFullYear()===now.getFullYear()).reduce((s,i)=>s+(i.amount||0),0);
+    const pending=all.filter(i=>i.status==='pending').reduce((s,i)=>s+(i.amount||0),0);
+    const overdue=all.filter(i=>i.status==='overdue').length;
+    main.innerHTML=`
+      <span class="eyebrow">Studio OS</span>
+      <h1 class="page-title">Good morning, <span class="script">Maria.</span></h1>
+      <p class="page-sub">Here's where everything stands today.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Revenue this month</div><div class="value">${fmtEur(monthRev)}</div></div>
+        <div class="stat-card"><div class="label">Revenue this year</div><div class="value">${fmtEur(yearRev)}</div></div>
+        <div class="stat-card"><div class="label">Pending revenue</div><div class="value warn">${fmtEur(pending)}</div></div>
+        <div class="stat-card"><div class="label">Overdue invoices</div><div class="value ${overdue>0?'warn':''}">${overdue}</div></div>
+        <div class="stat-card"><div class="label">Active clients</div><div class="value">${(clients||[]).length}</div></div>
+        <div class="stat-card"><div class="label">Active projects</div><div class="value">${(projects||[]).length}</div></div>
+        <div class="stat-card"><div class="label">Open leads</div><div class="value">${(leads||[]).length}</div></div>
+        <div class="stat-card"><div class="label">Upcoming meetings</div><div class="value">${(meetings||[]).length}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="panel">
+          <h3>Upcoming meetings</h3>
+          ${(meetings||[]).length?(meetings||[]).map(m=>`
+            <div style="padding:10px 0;border-top:0.5px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+              <div><div style="font-size:13.5px;font-weight:500;">${m.title}</div><div style="font-size:12px;color:var(--grey);margin-top:2px;">${fmtDate(m.meeting_date)}</div></div>
+              ${m.meeting_link?`<a href="https://${m.meeting_link}" target="_blank" style="font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--grey);">Join</a>`:''}
+            </div>`).join(''):'<p style="color:var(--grey);font-size:13px;">No upcoming meetings.</p>'}
+        </div>
+        <div class="panel">
+          <h3>Pending invoices</h3>
+          ${all.filter(i=>i.status==='pending').length?all.filter(i=>i.status==='pending').map(i=>`
+            <div style="padding:10px 0;border-top:0.5px solid var(--line);display:flex;justify-content:space-between;">
+              <span style="font-size:13.5px;">${i.invoice_number}</span>
+              <span style="font-family:'Playfair Display',serif;font-size:14px;">${fmtEur(i.amount)}</span>
+            </div>`).join(''):'<p style="color:var(--grey);font-size:13px;padding-top:10px;">No pending invoices.</p>'}
+        </div>
+      </div>`;
+
+  }else if(id==='clients'){
+    const[{data:clients},{data:projects},{data:invoices}]=await Promise.all([
+      sb.from('clients').select('*').order('client_name',{ascending:true}),
+      sb.from('projects').select('client_id,status'),
+      sb.from('invoices').select('client_id,amount,status'),
+    ]);
+    const projCount=cid=>(projects||[]).filter(p=>p.client_id===cid).length;
+    const totalBilled=cid=>(invoices||[]).filter(i=>i.client_id===cid).reduce((s,i)=>s+(i.amount||0),0);
+    main.innerHTML=`
+      <span class="eyebrow">Business</span>
+      <h1 class="page-title"><span class="script">Clients</span></h1>
+      <p class="page-sub">${(clients||[]).length} client${(clients||[]).length!==1?'s':''} total.</p>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Client</th><th>Service</th><th>Plan</th><th>Projects</th><th>Total billed</th><th>Since</th></tr></thead>
+          <tbody>
+            ${(clients||[]).map(c=>`<tr>
+              <td style="font-weight:500;">${c.client_name}</td>
+              <td style="color:var(--grey);">${c.service_type||'—'}</td>
+              <td>${c.plan_name||'—'}</td>
+              <td>${projCount(c.id)}</td>
+              <td style="font-family:'Playfair Display',serif;">${fmtEur(totalBilled(c.id))}</td>
+              <td style="color:var(--grey);">${fmtDate(c.created_at)}</td>
+            </tr>`).join('')||'<tr><td colspan="6" style="color:var(--grey);text-align:center;padding:24px;">No clients yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+
+  }else if(id==='projects'){
+    const[{data:projects},{data:progress}]=await Promise.all([
+      sb.from('projects').select('*,clients(client_name)').order('created_at',{ascending:false}),
+      sb.from('service_progress').select('*'),
+    ]);
+    const getP=pid=>(progress||[]).find(p=>p.project_id===pid);
+    main.innerHTML=`
+      <span class="eyebrow">Business</span>
+      <h1 class="page-title"><span class="script">Projects</span></h1>
+      <p class="page-sub">${(projects||[]).length} project${(projects||[]).length!==1?'s':''} total.</p>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Project</th><th>Client</th><th>Service</th><th>Status</th><th>Progress</th><th>Phase</th><th>Started</th></tr></thead>
+          <tbody>
+            ${(projects||[]).map(p=>{
+              const prog=getP(p.id);const pct=prog?.percentage||0;
+              return`<tr>
+                <td style="font-weight:500;">${p.title}</td>
+                <td style="color:var(--grey);">${p.clients?.client_name||'—'}</td>
+                <td style="color:var(--grey);">${p.service_type}</td>
+                <td><span class="pill ${p.status}">${p.status}</span></td>
+                <td style="min-width:100px;"><div style="font-size:11px;color:var(--grey);margin-bottom:4px;">${pct}%</div><div class="progress-bar"><div class="fill" style="width:${pct}%;"></div></div></td>
+                <td style="color:var(--grey);font-size:12px;">${prog?.current_phase||'—'}</td>
+                <td style="color:var(--grey);">${fmtDate(p.start_date)}</td>
+              </tr>`;
+            }).join('')||'<tr><td colspan="7" style="color:var(--grey);text-align:center;padding:24px;">No projects yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+
+  }else if(id==='contracts'){
+    const[{data:contracts},{data:clients}]=await Promise.all([
+      sb.from('contracts').select('*,clients(client_name)').order('created_at',{ascending:false}),
+      sb.from('clients').select('id,client_name').order('client_name',{ascending:true}),
+    ]);
+    main.innerHTML=`
+      <span class="eyebrow">Business</span>
+      <h1 class="page-title"><span class="script">Contracts</span></h1>
+      <p class="page-sub">All signed agreements, in one place.</p>
+      <form class="form-grid" id="contractForm">
+        <div><label>Client</label><select name="client_id"><option value="">Select client...</option>${(clients||[]).map(c=>`<option value="${c.id}">${c.client_name}</option>`).join('')}</select></div>
+        <div><label>Title</label><input type="text" name="title" placeholder="Brand Sprint Agreement" required></div>
+        <div><label>Service type</label><input type="text" name="service_type"></div>
+        <div><label>Value (€)</label><input type="number" name="value" step="0.01"></div>
+        <div><label>Signed date</label><input type="date" name="signed_date"></div>
+        <div><label>Status</label><select name="status"><option value="active">Active</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>
+        <div><label>Start date</label><input type="date" name="start_date"></div>
+        <div><label>End date</label><input type="date" name="end_date"></div>
+        <div class="full"><label>File URL</label><input type="url" name="file_url" placeholder="https://..."></div>
+        <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
+        <button type="submit" class="save-btn">Add contract</button>
+      </form>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Client</th><th>Title</th><th>Value</th><th>Signed</th><th>Status</th><th>File</th><th></th></tr></thead>
+          <tbody>
+            ${(contracts||[]).map(c=>`<tr>
+              <td style="font-weight:500;">${c.clients?.client_name||'—'}</td>
+              <td>${c.title}</td>
+              <td style="font-family:'Playfair Display',serif;">${fmtEur(c.value)}</td>
+              <td style="color:var(--grey);">${fmtDate(c.signed_date)}</td>
+              <td><span class="pill ${c.status}">${c.status}</span></td>
+              <td>${c.file_url?`<a href="${c.file_url}" target="_blank" style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:0.5px;">View</a>`:'—'}</td>
+              <td><button class="del-btn" onclick="delRow('contracts','${c.id}')">Delete</button></td>
+            </tr>`).join('')||'<tr><td colspan="7" style="color:var(--grey);text-align:center;padding:24px;">No contracts yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('contractForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const f=new FormData(e.target);
+      await sb.from('contracts').insert({client_id:f.get('client_id')||null,title:f.get('title'),service_type:f.get('service_type')||null,value:f.get('value')||null,signed_date:f.get('signed_date')||null,status:f.get('status'),start_date:f.get('start_date')||null,end_date:f.get('end_date')||null,file_url:f.get('file_url')||null,notes:f.get('notes')||null});
+      renderSection('contracts');
+    });
+
+  }else if(id==='financial'){
+    const[{data:invoices},{data:clients}]=await Promise.all([
+      sb.from('invoices').select('*,clients(client_name)').order('invoice_date',{ascending:false}),
+      sb.from('clients').select('id,client_name').order('client_name',{ascending:true}),
+    ]);
+    const all=invoices||[];
+    const recv=all.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.amount||0),0);
+    const pend=all.filter(i=>i.status==='pending').reduce((s,i)=>s+(i.amount||0),0);
+    const ovrd=all.filter(i=>i.status==='overdue').reduce((s,i)=>s+(i.amount||0),0);
+    main.innerHTML=`
+      <span class="eyebrow">Business</span>
+      <h1 class="page-title"><span class="script">Financial</span></h1>
+      <p class="page-sub">Every invoice, every euro, every status.</p>
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px;">
+        <div class="stat-card"><div class="label">Total received</div><div class="value good">${fmtEur(recv)}</div></div>
+        <div class="stat-card"><div class="label">Pending</div><div class="value warn">${fmtEur(pend)}</div></div>
+        <div class="stat-card"><div class="label">Overdue</div><div class="value ${ovrd>0?'warn':''}">${fmtEur(ovrd)}</div></div>
+      </div>
+      <form class="form-grid" id="invoiceForm">
+        <div><label>Client</label><select name="client_id" required><option value="">Select client...</option>${(clients||[]).map(c=>`<option value="${c.id}">${c.client_name}</option>`).join('')}</select></div>
+        <div><label>Invoice number</label><input type="text" name="invoice_number" placeholder="Invoice #005" required></div>
+        <div><label>Amount (€)</label><input type="number" name="amount" step="0.01"></div>
+        <div><label>Invoice date</label><input type="date" name="invoice_date"></div>
+        <div><label>Status</label><select name="status"><option value="pending">Pending</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+        <button type="submit" class="save-btn">Add invoice</button>
+      </form>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${all.map(inv=>`<tr>
+              <td style="font-weight:500;">${inv.clients?.client_name||'—'}</td>
+              <td>${inv.invoice_number}</td>
+              <td style="font-family:'Playfair Display',serif;">${fmtEur(inv.amount)}</td>
+              <td style="color:var(--grey);">${fmtDate(inv.invoice_date)}</td>
+              <td><select class="edit-inline" onchange="updateStatus('invoices','${inv.id}',this.value)"><option value="pending" ${inv.status==='pending'?'selected':''}>Pending</option><option value="paid" ${inv.status==='paid'?'selected':''}>Paid</option><option value="overdue" ${inv.status==='overdue'?'selected':''}>Overdue</option></select></td>
+              <td><button class="del-btn" onclick="delRow('invoices','${inv.id}')">Delete</button></td>
+            </tr>`).join('')||'<tr><td colspan="6" style="color:var(--grey);text-align:center;padding:24px;">No invoices yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('invoiceForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const f=new FormData(e.target);
+      await sb.from('invoices').insert({client_id:f.get('client_id'),invoice_number:f.get('invoice_number'),amount:f.get('amount')||null,invoice_date:f.get('invoice_date')||null,status:f.get('status')});
+      renderSection('financial');
+    });
+
+  }else if(id==='calendar'){
+    const now=new Date();const year=now.getFullYear();const month=now.getMonth();
+    const[{data:meetings},{data:timelines}]=await Promise.all([
+      sb.from('meetings').select('*,clients(client_name)').eq('kind','upcoming'),
+      sb.from('project_timeline').select('*').not('due_date','is',null),
+    ]);
+    const firstDay=(new Date(year,month,1).getDay()+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const monthName=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    const evts={};
+    (meetings||[]).forEach(m=>{if(!m.meeting_date)return;const d=new Date(m.meeting_date);if(d.getMonth()===month&&d.getFullYear()===year){const day=d.getDate();if(!evts[day])evts[day]=[];evts[day].push({type:'meeting',label:m.title});}});
+    (timelines||[]).forEach(t=>{if(!t.due_date)return;const d=new Date(t.due_date);if(d.getMonth()===month&&d.getFullYear()===year){const day=d.getDate();if(!evts[day])evts[day]=[];evts[day].push({type:'delivery',label:t.title});}});
+    let cells='';
+    for(let i=0;i<firstDay;i++)cells+=`<div class="cal-day" style="background:var(--stone);"></div>`;
+    for(let d=1;d<=daysInMonth;d++){
+      const isToday=d===now.getDate();
+      const ev=evts[d]||[];
+      cells+=`<div class="cal-day ${isToday?'today':''}"><div class="day-num">${d}</div>${ev.map(e=>`<div class="cal-event ${e.type}">${e.label}</div>`).join('')}</div>`;
+    }
+    main.innerHTML=`
+      <span class="eyebrow">Work</span>
+      <h1 class="page-title"><span class="script">${monthName}</span></h1>
+      <p class="page-sub"><span style="display:inline-block;width:10px;height:10px;background:#e8f0e9;margin-right:6px;"></span>Meetings &nbsp;<span style="display:inline-block;width:10px;height:10px;background:#f5ede0;margin-right:6px;"></span>Deliveries</p>
+      <div class="cal-grid" style="margin-bottom:4px;">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="cal-header">${d}</div>`).join('')}</div>
+      <div class="cal-grid">${cells}</div>`;
+
+  }else if(id==='leads'){
+    const{data:leads}=await sb.from('leads').select('*').order('created_at',{ascending:false});
+    const sc={new:0,contacted:0,proposal_sent:0,closed:0,lost:0};
+    (leads||[]).forEach(l=>{if(sc[l.status]!==undefined)sc[l.status]++;});
+    main.innerHTML=`
+      <span class="eyebrow">Work</span>
+      <h1 class="page-title"><span class="script">Leads</span></h1>
+      <p class="page-sub">${(leads||[]).length} leads — ${sc.new+sc.contacted+sc.proposal_sent} active.</p>
+      <form class="form-grid" id="leadForm">
+        <div><label>Name</label><input type="text" name="name" required></div>
+        <div><label>Company</label><input type="text" name="company"></div>
+        <div><label>Email</label><input type="email" name="email"></div>
+        <div><label>Phone</label><input type="text" name="phone"></div>
+        <div><label>Service interest</label><select name="service_interest"><option value="">Select...</option><option>Brand Diagnosis</option><option>Brand Positioning</option><option>Brand Sprint</option><option>Creative Direction</option><option>Campaigns</option><option>Social Media Management</option></select></div>
+        <div><label>Budget</label><input type="text" name="budget" placeholder="€1.500 – €3.000"></div>
+        <div><label>Source</label><input type="text" name="source" placeholder="Instagram, referral..."></div>
+        <div><label>Status</label><select name="status"><option value="new">New</option><option value="contacted">Contacted</option><option value="proposal_sent">Proposal sent</option><option value="closed">Closed</option><option value="lost">Lost</option></select></div>
+        <div class="full"><label>Notes</label><textarea name="notes"></textarea></div>
+        <button type="submit" class="save-btn">Add lead</button>
+      </form>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Company</th><th>Service</th><th>Budget</th><th>Source</th><th>Status</th><th>Added</th><th></th></tr></thead>
+          <tbody>
+            ${(leads||[]).map(l=>`<tr>
+              <td style="font-weight:500;">${l.name}</td>
+              <td style="color:var(--grey);">${l.company||'—'}</td>
+              <td style="color:var(--grey);">${l.service_interest||'—'}</td>
+              <td>${l.budget||'—'}</td>
+              <td style="color:var(--grey);">${l.source||'—'}</td>
+              <td><select class="edit-inline" onchange="updateStatus('leads','${l.id}',this.value)"><option value="new" ${l.status==='new'?'selected':''}>New</option><option value="contacted" ${l.status==='contacted'?'selected':''}>Contacted</option><option value="proposal_sent" ${l.status==='proposal_sent'?'selected':''}>Proposal sent</option><option value="closed" ${l.status==='closed'?'selected':''}>Closed</option><option value="lost" ${l.status==='lost'?'selected':''}>Lost</option></select></td>
+              <td style="color:var(--grey);">${fmtDate(l.created_at)}</td>
+              <td><button class="del-btn" onclick="delRow('leads','${l.id}')">Delete</button></td>
+            </tr>`).join('')||'<tr><td colspan="8" style="color:var(--grey);text-align:center;padding:24px;">No leads yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('leadForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const f=new FormData(e.target);
+      await sb.from('leads').insert({name:f.get('name'),company:f.get('company')||null,email:f.get('email')||null,phone:f.get('phone')||null,service_interest:f.get('service_interest')||null,budget:f.get('budget')||null,source:f.get('source')||null,status:f.get('status'),notes:f.get('notes')||null});
+      renderSection('leads');
+    });
+
+  }else if(id==='newsletter'){
+    const{data:subs}=await sb.from('newsletter_subscribers').select('*').order('created_at',{ascending:false});
+    const all=subs||[];
+    const thisMonth=all.filter(s=>{const d=new Date(s.created_at);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length;
+    main.innerHTML=`
+      <span class="eyebrow">Work</span>
+      <h1 class="page-title"><span class="script">Newsletter</span></h1>
+      <p class="page-sub">${all.length} subscriber${all.length!==1?'s':''} total.</p>
+      <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:28px;">
+        <div class="stat-card"><div class="label">Total subscribers</div><div class="value">${all.length}</div></div>
+        <div class="stat-card"><div class="label">New this month</div><div class="value good">${thisMonth}</div></div>
+      </div>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead><tr><th>Email</th><th>Subscribed</th><th></th></tr></thead>
+          <tbody>
+            ${all.map(s=>`<tr>
+              <td style="font-weight:500;">${s.email}</td>
+              <td style="color:var(--grey);">${fmtDate(s.created_at)}</td>
+              <td><button class="del-btn" onclick="delRow('newsletter_subscribers','${s.id}')">Delete</button></td>
+            </tr>`).join('')||'<tr><td colspan="3" style="color:var(--grey);text-align:center;padding:24px;">No subscribers yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+
+  }else if(id==='templates'){
+    const{data:templates}=await sb.from('templates').select('*').order('category,title');
+    const cats=['proposal','contract','email','questionnaire','onboarding','other'];
+    const catL={proposal:'Proposals',contract:'Contracts',email:'Emails',questionnaire:'Questionnaires',onboarding:'Onboarding',other:'Other'};
+    const g={};cats.forEach(c=>{g[c]=(templates||[]).filter(t=>t.category===c);});
+    main.innerHTML=`
+      <span class="eyebrow">Library</span>
+      <h1 class="page-title"><span class="script">Templates</span></h1>
+      <p class="page-sub">Your private library of proposals, contracts, emails, and questionnaires.</p>
+      <form class="form-grid" id="templateForm">
+        <div><label>Title</label><input type="text" name="title" required></div>
+        <div><label>Category</label><select name="category">${cats.map(c=>`<option value="${c}">${catL[c]}</option>`).join('')}</select></div>
+        <div class="full"><label>Content</label><textarea name="content" style="min-height:140px;"></textarea></div>
+        <div class="full"><label>File URL (if external doc)</label><input type="url" name="file_url" placeholder="https://..."></div>
+        <button type="submit" class="save-btn">Save template</button>
+      </form>
+      ${cats.filter(c=>g[c].length>0).map(c=>`
+        <div class="panel" style="margin-bottom:16px;">
+          <h3>${catL[c]}</h3>
+          ${g[c].map(t=>`
+            <div style="padding:12px 0;border-top:0.5px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;">
+              <div style="flex:1;margin-right:20px;">
+                <div style="font-size:14px;font-weight:500;margin-bottom:4px;">${t.title}</div>
+                ${t.content?`<div style="font-size:13px;color:var(--grey);white-space:pre-wrap;max-height:80px;overflow:hidden;">${t.content.slice(0,200)}${t.content.length>200?'...':''}</div>`:''}
+                ${t.file_url?`<a href="${t.file_url}" target="_blank" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--grey);margin-top:6px;display:inline-block;">Open file</a>`:''}
+              </div>
+              <button class="del-btn" onclick="delRow('templates','${t.id}')">Delete</button>
+            </div>`).join('')}
+        </div>`).join('')}
+      ${cats.every(c=>g[c].length===0)?'<div class="panel"><p style="color:var(--grey);font-size:13px;">No templates yet. Add your first one above.</p></div>':''}`;
+    document.getElementById('templateForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const f=new FormData(e.target);
+      await sb.from('templates').insert({title:f.get('title'),category:f.get('category'),content:f.get('content')||null,file_url:f.get('file_url')||null});
+      renderSection('templates');
+    });
+
+  }else if(id==='knowledge'){
+    const{data:items}=await sb.from('knowledge_base').select('*').order('category,title');
+    const cats=['strategy','framework','checklist','process','other'];
+    const catL={strategy:'Strategies',framework:'Frameworks',checklist:'Checklists',process:'Processes',other:'Other'};
+    const g={};cats.forEach(c=>{g[c]=(items||[]).filter(i=>i.category===c);});
+    main.innerHTML=`
+      <span class="eyebrow">Library</span>
+      <h1 class="page-title">Knowledge <span class="script">Base</span></h1>
+      <p class="page-sub">Strategies, frameworks, checklists, and processes — everything you have learned.</p>
+      <form class="form-grid" id="kbForm">
+        <div><label>Title</label><input type="text" name="title" required></div>
+        <div><label>Category</label><select name="category">${cats.map(c=>`<option value="${c}">${catL[c]}</option>`).join('')}</select></div>
+        <div class="full"><label>Content</label><textarea name="content" style="min-height:160px;" placeholder="Write your strategy, checklist, or process here..."></textarea></div>
+        <button type="submit" class="save-btn">Save entry</button>
+      </form>
+      ${cats.filter(c=>g[c].length>0).map(c=>`
+        <div class="panel" style="margin-bottom:16px;">
+          <h3>${catL[c]}</h3>
+          ${g[c].map(item=>`
+            <div style="padding:16px 0;border-top:0.5px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:500;">${item.title}</div>
+                <button class="del-btn" onclick="delRow('knowledge_base','${item.id}')">Delete</button>
+              </div>
+              ${item.content?`<div style="font-size:13.5px;color:#3c3a35;line-height:1.8;white-space:pre-wrap;">${item.content}</div>`:''}
+            </div>`).join('')}
+        </div>`).join('')}
+      ${cats.every(c=>g[c].length===0)?'<div class="panel"><p style="color:var(--grey);font-size:13px;">Nothing yet. Start building your library above.</p></div>':''}`;
+    document.getElementById('kbForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const f=new FormData(e.target);
+      await sb.from('knowledge_base').insert({title:f.get('title'),category:f.get('category'),content:f.get('content')||null});
+      renderSection('knowledge');
+    });
+  }
+}
+
+async function delRow(table,id){
+  if(!confirm('Delete this item?'))return;
+  await sb.from(table).delete().eq('id',id);
+  document.querySelector('.nav-btn.active')?.click();
+}
+window.delRow=delRow;
+
+async function updateStatus(table,id,value){
+  await sb.from(table).update({status:value}).eq('id',id);
+}
+window.updateStatus=updateStatus;
+</script>
+</body>
+</html>
